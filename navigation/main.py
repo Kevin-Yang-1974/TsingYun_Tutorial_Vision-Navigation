@@ -86,6 +86,7 @@ def main() -> None:
     )
 
     renderer = Renderer(
+        level=level,
         task=task,
         lidar=lidar,
         cell_size=int(cfg["renderer"]["cell_size"]),
@@ -136,7 +137,7 @@ def main() -> None:
             cmd_vx, cmd_vy = 0.0, 0.0
 
         task.update(cmd_vx, cmd_vy, global_path, dt)
-        renderer.render(task, lidar, global_path, active_costmap, level)
+        renderer.render(global_path, active_costmap)
         recorder.capture()
 
     recorder.stop()

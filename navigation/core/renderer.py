@@ -43,11 +43,13 @@ class Renderer:
 
     def __init__(
         self,
+        level: int,
         task: Task,
         lidar: Lidar = None,
         cell_size: int = 28,
         sidebar_width: int = 230,
     ) -> None:
+        self.level = level
         self.task = task
         self.lidar = lidar
         self.cs = cell_size
@@ -106,23 +108,20 @@ class Renderer:
     # Main render call
     def render(
         self,
-        task: Task,
-        lidar: Lidar = None,
         global_path: Optional[List[Tuple[float, float]]] = None,
         costmap: Optional[np.ndarray] = None,
-        level: int = 1,
     ) -> None:
         self.screen.fill(self.C_BG)
 
         # Layer 0 – static map
-        self.screen.blit(self._get_map_surf(task.world.static_map), (0, 0))
+        self.screen.blit(self._get_map_surf(self.task.world.static_map), (0, 0))
 
         # Layer 1 – costmap overlay
         if costmap is not None and costmap.max() > 0:
             self._draw_costmap(costmap)
 
         # Layer 2a – dynamic obstacles (and their movement bbox)
-        for obs in task.world.dynamic_obstacles:
+        for obs in self.task.world.dynamic_obstacles:
             xmin, ymin, xmax, ymax = obs.bbox
             if xmax > xmin and ymax > ymin:
                 sx0, sy0 = self.w2s(xmin, ymin)
@@ -137,8 +136,8 @@ class Renderer:
             pygame.draw.circle(self.screen, self.C_DYN_BBOX, (px, py), pr, 1)
 
         # Layer 2b – goal marker
-        if task.goal is not None:
-            px, py = self.w2s(task.goal[0], task.goal[1])
+        if self.task.goal is not None:
+            px, py = self.w2s(self.task.goal[0], self.task.goal[1])
             r = max(5, self.cs // 3)
             pygame.draw.circle(self.screen, self.C_GOAL, (px, py), r)
             pygame.draw.circle(self.screen, (20, 240, 100), (px, py), r, 2)
@@ -152,33 +151,32 @@ class Renderer:
                 pygame.draw.circle(self.screen, self.C_PATH, pt, 3)
 
         # Layer 3 – lidar
-        if level >= 2 and lidar is not None:
-            lidar_data = lidar.distances
-            lidar_angles = lidar.angles
+        if self.level >= 2 and self.lidar is not None:
+            lidar_data = self.lidar.distances
+            lidar_angles = self.lidar.angles
             if lidar_data is not None and lidar_angles is not None:
-                rx, ry = self.w2s(task.world.robot.x, task.world.robot.y)
+                rx, ry = self.w2s(self.task.world.robot.x, self.task.world.robot.y)
                 for dist, angle in zip(lidar_data, lidar_angles):
-                    ex = task.world.robot.x + dist * math.cos(angle)
-                    ey = task.world.robot.y + dist * math.sin(angle)
+                    ex = self.task.world.robot.x + dist * math.cos(angle)
+                    ey = self.task.world.robot.y + dist * math.sin(angle)
                     epx, epy = self.w2s(ex, ey)
-                    pygame.draw.line(self.screen, self.C_LIDAR_RAY,
-                                     (rx, ry), (epx, epy), 1)
+                    pygame.draw.line(self.screen, self.C_LIDAR_RAY, (rx, ry), (epx, epy), 1)
                     pygame.draw.circle(self.screen, self.C_LIDAR_HIT, (epx, epy), 3)
 
         # Layer 4 – robot body + velocity arrow
-        rx, ry = self.w2s(task.world.robot.x, task.world.robot.y)
-        rp = max(4, int(task.world.robot.radius * self.cs))
+        rx, ry = self.w2s(self.task.world.robot.x, self.task.world.robot.y)
+        rp = max(4, int(self.task.world.robot.radius * self.cs))
         pygame.draw.circle(self.screen, self.C_ROBOT, (rx, ry), rp)
         pygame.draw.circle(self.screen, self.C_ROBOT_RIM, (rx, ry), rp, 2)
-        spd = math.hypot(task.world.robot.vx, task.world.robot.vy)
+        spd = math.hypot(self.task.world.robot.vx, self.task.world.robot.vy)
         if spd > 0.05:
-            scale = rp * 2.0 / task.world.robot.max_speed
-            ax = int(rx + task.world.robot.vx * scale)
-            ay = int(ry + task.world.robot.vy * scale)
+            scale = rp * 2.0 / self.task.world.robot.max_speed
+            ax = int(rx + self.task.world.robot.vx * scale)
+            ay = int(ry + self.task.world.robot.vy * scale)
             pygame.draw.line(self.screen, self.C_ROBOT_RIM, (rx, ry), (ax, ay), 2)
 
         # Layer 5 – sidebar
-        self._draw_sidebar(task, level)
+        self._draw_sidebar()
 
         pygame.display.flip()
 
@@ -204,11 +202,7 @@ class Renderer:
         self.screen.blit(surf, (0, 0))
 
     # Sidebar
-    def _draw_sidebar(
-        self,
-        task: Task,
-        level: int,
-    ) -> None:
+    def _draw_sidebar(self) -> None:
         ox = self.mw
         pygame.draw.rect(self.screen, self.C_SIDEBAR_BG,
                          pygame.Rect(ox, 0, self.sw, self.win_h))
@@ -230,18 +224,18 @@ class Renderer:
             oy += 6
 
         ln("NAV SIMULATOR", color=(100, 200, 255), font=self._font_lg)
-        lv_color = (100, 255, 120) if level == 1 else (255, 160, 60)
-        ln(f"Level {level}  {'[Static]' if level == 1 else '[Dynamic+Lidar]'}",
+        lv_color = (100, 255, 120) if self.level == 1 else (255, 160, 60)
+        ln(f"Level {self.level}  {'[Static]' if self.level == 1 else '[Dynamic+Lidar]'}",
            color=lv_color, font=self._font_md)
         sep()
 
-        ln(f"Pos   ({task.world.robot.x:5.2f}, {task.world.robot.y:5.2f})")
-        ln(f"Vel   ({task.world.robot.vx:5.2f}, {task.world.robot.vy:5.2f})")
-        spd = math.hypot(task.world.robot.vx, task.world.robot.vy)
-        ln(f"Speed  {spd:4.2f} / {task.world.robot.max_speed:.1f}")
+        ln(f"Pos   ({self.task.world.robot.x:5.2f}, {self.task.world.robot.y:5.2f})")
+        ln(f"Vel   ({self.task.world.robot.vx:5.2f}, {self.task.world.robot.vy:5.2f})")
+        spd = math.hypot(self.task.world.robot.vx, self.task.world.robot.vy)
+        ln(f"Speed  {spd:4.2f} / {self.task.world.robot.max_speed:.1f}")
 
         bar_total = self.sw - 30
-        bar_filled = int(min(spd / task.world.robot.max_speed, 1.0) * bar_total)
+        bar_filled = int(min(spd / self.task.world.robot.max_speed, 1.0) * bar_total)
         bx, by = ox - 5, oy + 2
         pygame.draw.rect(self.screen, (55, 55, 75),
                          pygame.Rect(bx, by, bar_total, 7), border_radius=3)
@@ -252,12 +246,12 @@ class Renderer:
 
         sep()
         ln("Controls", color=(160, 160, 200), font=self._font_md)
-        ln("Left-click  set goal",    color=(140, 140, 165))
-        ln("Right-click reset robot", color=(140, 140, 165))
-        ln("ESC         quit",        color=(140, 140, 165))
+        ln("Left-click  set goal", color=(140, 140, 165))
+        ln("Right-click reset",    color=(140, 140, 165))
+        ln("ESC         quit",     color=(140, 140, 165))
 
-        if task.info:
+        if self.task.info:
             sep()
             ln("Status", color=(160, 200, 160), font=self._font_md)
-            for k, v in task.info.items():
+            for k, v in self.task.info.items():
                 ln(f"{k}: {v}", color=(175, 220, 175))

@@ -1,12 +1,5 @@
 fps: 30
 
-task:
-  start_pos: [10.0, 10.0]
-  goal_pos: [70.0, 70.0]
-  goal_threshold: 1.6
-  pos_eps: 1e-3
-  stable_frames: 5
-
 robot:
   radius: 1.6
   max_speed: 18.0
@@ -25,6 +18,13 @@ world:
     - [68.0, 58.0, 8.0, 8.0]
 
   rng_seed: 47
+
+task:
+  start_pos: [10.0, 10.0]
+  goal_pos: [70.0, 70.0]
+  goal_threshold: 1.6
+  pos_eps: 1e-3
+  stable_frames: 5
 
 lidar:
   range: 32.0

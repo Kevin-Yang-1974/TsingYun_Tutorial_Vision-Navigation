@@ -7,6 +7,8 @@ from typing import Tuple
 import numpy as np
 import scipy
 
+static_cost_map = None  
+
 def compute_costmap(
     static_map: np.ndarray,
 ) -> np.ndarray:
@@ -44,7 +46,7 @@ def compute_costmap(
     """
     
     max_cost = 255.0
-    inflation_radius = 4.0  
+    inflation_radius = 4.5  
     distance_map =(static_map == 0).astype(np.uint8)  
     distance_map=scipy.ndimage.distance_transform_edt(distance_map)
     cost_map = np.zeros_like(static_map, dtype=np.uint8)
@@ -100,7 +102,9 @@ def update_local_costmap(
       re-inflating the same area.
     """
     dynamic_max_cost = 255.0
-    dynamic_inflation_radius = 3.5  
+    dynamic_inflation_radius = 4.0  
+    if static_cost_map is None:
+        static_cost_map = compute_costmap(static_map)
     angles = np.linspace(0, 2 * np.pi, lidar_num_rays, endpoint=False)
     hit=np.stack((lidar_scan,angles),axis=1)
     valid_hits=hit[hit[:,0]<lidar_range]
@@ -109,7 +113,7 @@ def update_local_costmap(
     hit_points[:,1]=valid_hits[:,0]*np.sin(valid_hits[:,1])+robot_pos[1]
     rows,cols=static_map.shape
     hit_points=hit_points.astype(np.int32)
-    mask=(hit_points[:,0]>0)&(hit_points[:,0]<cols)&(hit_points[:,1]>0)&(hit_points[:,1]<rows)
+    mask=(hit_points[:,0]>=0)&(hit_points[:,0]<cols)&(hit_points[:,1]>0)&(hit_points[:,1]<rows)
     hit_points=hit_points[mask]
     dynamic_map=np.zeros_like(static_map)
     dynamic_map[hit_points[:,1].astype(np.int32),hit_points[:,0].astype(np.int32)]=1
@@ -117,6 +121,6 @@ def update_local_costmap(
     distance_map=scipy.ndimage.distance_transform_edt(distance_map)
     dynamic_cost_map = np.zeros_like(static_map, dtype=np.uint8)
     dynamic_cost_map[distance_map <= dynamic_inflation_radius] =(dynamic_max_cost*(1 - distance_map[distance_map <= dynamic_inflation_radius] / dynamic_inflation_radius)).astype(np.uint8)
-    return np.maximum(compute_costmap(static_map), dynamic_cost_map)
+    return np.maximum(static_cost_map, dynamic_cost_map)
     # TODO: Implement a function to update the global costmap with a local dynamic layer based on the lidar scan.
     

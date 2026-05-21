@@ -6,6 +6,7 @@ from typing import List, Tuple
 
 import numpy as np
 
+from navigation.nav import A_star
 
 def global_plan(
     start: Tuple[float, float],
@@ -43,4 +44,6 @@ def global_plan(
       (diagonal distance) or Euclidean distance.
     """
     # TODO: Implement path search on the costmap grid to find a path from start to goal.
-    return []
+    planner = A_star.AStarPlanner(costmap)
+    path = planner.plan(start, goal)
+    return path

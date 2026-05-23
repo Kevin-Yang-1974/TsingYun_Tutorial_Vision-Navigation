@@ -46,7 +46,7 @@ def compute_costmap(
     """
     if not np.any(static_map == 1):
       return np.zeros_like(static_map, dtype=np.uint8)
-    inflation_radius = 4.5  
+    inflation_radius = 4.0 
     distance_map =(static_map == 0).astype(np.uint8)  
     distance_map=scipy.ndimage.distance_transform_edt(distance_map)
     cost_map =compute_cost(distance_map, 1.6, inflation_radius)
@@ -101,7 +101,7 @@ def update_local_costmap(
       re-inflating the same area.
     """
     global static_cost_map
-    dynamic_inflation_radius = 4.0  
+    dynamic_inflation_radius = 6.0 
     if static_cost_map is None:
         static_cost_map = compute_costmap(static_map)
     angles = np.linspace(0, 2 * np.pi, lidar_num_rays, endpoint=False)
@@ -116,6 +116,8 @@ def update_local_costmap(
     hit_points=hit_points[mask]
     dynamic_map=np.zeros_like(static_map)
     dynamic_map[hit_points[:,1].astype(np.int32),hit_points[:,0].astype(np.int32)]=1
+    mask=(dynamic_map==static_map)
+    dynamic_map[mask]=0
     if not np.any(dynamic_map == 1):
       return static_cost_map
     distance_map =(dynamic_map == 0).astype(np.uint8)  

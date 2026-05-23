@@ -11,7 +11,7 @@ class AStarPlanner:
         self.actual_cost_map = np.full((self.rows, self.cols), np.inf)
     def heuristic(self, a: Tuple[int, int], b: Tuple[int, int]) -> float:
         #Euclidean distance
-        alpha = 0.8
+        alpha = 1.2
         return alpha*np.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
     def actual_cost(self, a: Tuple[int, int], b: Tuple[int, int]) -> float:
         return self.actual_cost_map[a[1], a[0]] + (np.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) if a != b else 0)+self.costmap[b[1], b[0]]
@@ -55,6 +55,8 @@ class AStarPlanner:
 
             while open_set:
                 current = heapq.heappop(open_set)[1]
+                if current in closed_set:
+                    continue
                 if current == goal_node:
                     return self.reconstruct_path(came_from, current)
 

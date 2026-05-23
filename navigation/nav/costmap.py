@@ -46,7 +46,7 @@ def compute_costmap(
     """
     if not np.any(static_map == 1):
       return np.zeros_like(static_map, dtype=np.uint8)
-    inflation_radius = 4.0 
+    inflation_radius = 4.5 
     distance_map =(static_map == 0).astype(np.uint8)  
     distance_map=scipy.ndimage.distance_transform_edt(distance_map)
     cost_map =compute_cost(distance_map, 1.6, inflation_radius)

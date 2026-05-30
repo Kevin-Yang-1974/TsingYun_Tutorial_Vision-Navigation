@@ -14,8 +14,8 @@ def local_plan(
     global_path: List[Tuple[float, float]],
     costmap: np.ndarray = None,
 ) -> Tuple[float, float]:
-    Ld=3.5  # look-ahead distance in grid units
-    slow_radius=6.0
+    Ld = 3.5  # look-ahead distance in grid units
+    slow_radius = 6.0
     if not global_path:
         return 0.0, 0.0
     look_ahead_point = global_path[-1]  # default to the last waypoint
@@ -26,7 +26,7 @@ def local_plan(
             break
     goal=global_path[-1]
     dist_to_goal = np.sqrt((goal[0] - current_pose[0]) ** 2 + (goal[1] - current_pose[1]) ** 2)
-    if dist_to_goal<0.8:
+    if dist_to_goal < 0.8:
         return 0.0, 0.0
     direction = np.array(look_ahead_point) - np.array(current_pose)
     direction_dist = np.linalg.norm(direction)
@@ -47,4 +47,5 @@ def local_plan(
           if np.any(front_mask):
               distance_from_obstacle = np.min(obstacle_distance[front_mask] / cos_angle[front_mask])
               speed = np.min([max_speed,np.sqrt(2*distance_from_obstacle*max_accel)])  # slow down if dangerous cells are ahead
-    return tuple(direction_norm * speed*dist_to_goal/slow_radius if dist_to_goal<slow_radius else direction_norm * speed)
+    cmd=direction_norm * speed*dist_to_goal/slow_radius if dist_to_goal<slow_radius else direction_norm * speed
+    return float(cmd[0]),float(cmd[1])

@@ -6,7 +6,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-from nav.A_star import AStarPlanner
+from .A_star import AStarPlanner
 
 def global_plan(
     start: Tuple[float, float],
